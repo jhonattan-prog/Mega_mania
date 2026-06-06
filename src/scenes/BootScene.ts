@@ -8,6 +8,7 @@ export class BootScene extends Phaser.Scene {
 
   preload(): void {
     this.generateAllTextures();
+    this.load.audio('fah', 'fah.mp3');
   }
 
   create(): void {

@@ -123,7 +123,7 @@ export class GameScene extends Phaser.Scene {
     // Player fire event
     this.events.on('player-fire', (x: number, y: number) => {
       this.bulletPool.firePlayerBullet(x, y);
-      this.audioManager.playLaser();
+      this.audioManager.playLaser(this);
       this.stats.shotsFired++;
     });
 

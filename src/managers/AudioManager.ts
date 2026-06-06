@@ -46,9 +46,19 @@ export class AudioManager {
     }
   }
 
-  playLaser(): void {
+  playLaser(scene?: Phaser.Scene): void {
     if (!this.settings.sfxEnabled) return;
     this.resumeContext();
+
+    if (scene && scene.sound && typeof scene.sound.play === 'function') {
+      try {
+        scene.sound.play('fah', { volume: this.settings.volume * 0.7 });
+        return;
+      } catch (e) {
+        console.warn('Could not play loaded fah sound, falling back to Web Audio API', e);
+      }
+    }
+
     if (!this.audioContext) return;
 
     const ctx = this.audioContext;
