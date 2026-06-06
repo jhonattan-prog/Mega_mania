@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="description" content="Megamania Remake — Um jogo space shooter clássico reinventado com visuais modernos, efeitos de partículas e gameplay aprimorado.">
+  <meta name="theme-color" content="#0a0a1a">
+  <title>Megamania Remake</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #0a0a1a;
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+    }
+    #game {
+      width: 100%; height: 100%; display: block;
+    }
+    canvas { display: block; }
+
+    /* Touch Controls — Neon Glassmorphism */
+    .touch-controls {
+      display: none;
+      position: fixed;
+      bottom: 12px;
+      left: 0; right: 0;
+      padding: 12px 20px;
+      pointer-events: none;
+      z-index: 100;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .touch-controls.visible {
+      display: flex;
+    }
+    .touch-btn {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: rgba(0, 229, 255, 0.08);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 2px solid rgba(0, 229, 255, 0.3);
+      color: rgba(0, 229, 255, 0.8);
+      font-size: 22px;
+      font-family: 'Press Start 2P', monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      pointer-events: auto;
+      transition: all 0.15s ease;
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.1), inset 0 0 15px rgba(0, 229, 255, 0.05);
+    }
+    .touch-btn:active {
+      background: rgba(0, 229, 255, 0.2);
+      border-color: rgba(0, 229, 255, 0.6);
+      box-shadow: 0 0 25px rgba(0, 229, 255, 0.3), inset 0 0 20px rgba(0, 229, 255, 0.15);
+      transform: scale(0.95);
+    }
+    .touch-btn.fire {
+      width: 76px; height: 76px;
+      font-size: 26px;
+      background: rgba(255, 45, 149, 0.08);
+      border-color: rgba(255, 45, 149, 0.3);
+      color: rgba(255, 45, 149, 0.8);
+      box-shadow: 0 0 15px rgba(255, 45, 149, 0.1), inset 0 0 15px rgba(255, 45, 149, 0.05);
+    }
+    .touch-btn.fire:active {
+      background: rgba(255, 45, 149, 0.2);
+      border-color: rgba(255, 45, 149, 0.6);
+      box-shadow: 0 0 25px rgba(255, 45, 149, 0.3), inset 0 0 20px rgba(255, 45, 149, 0.15);
+      transform: scale(0.95);
+    }
+    @media (pointer: coarse) {
+      .touch-controls { display: flex; }
+    }
+
+    /* Loading screen */
+    #loading {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #0a0a1a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease;
+    }
+    #loading.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #loading h1 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 18px;
+      color: #00e5ff;
+      text-shadow: 0 0 20px rgba(0, 229, 255, 0.5);
+      margin-bottom: 30px;
+    }
+    .loading-bar-container {
+      width: 200px; height: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 3px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 229, 255, 0.2);
+    }
+    .loading-bar {
+      width: 0%; height: 100%;
+      background: linear-gradient(90deg, #00e5ff, #b44aff);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+    }
+    .loading-text {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 7px;
+      color: #666688;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">
+    <h1>MEGAMANIA</h1>
+    <div class="loading-bar-container">
+      <div class="loading-bar" id="loadingBar"></div>
+    </div>
+    <div class="loading-text">CARREGANDO...</div>
+  </div>
+
+  <div id="game"></div>
+
+  <div class="touch-controls" id="touchControls">
+    <button class="touch-btn" id="btnLeft" aria-label="Mover esquerda">◀</button>
+    <button class="touch-btn fire" id="btnFire" aria-label="Atirar">▲</button>
+    <button class="touch-btn" id="btnRight" aria-label="Mover direita">▶</button>
+  </div>
+
+  <script>
+    // Animate loading bar
+    const bar = document.getElementById('loadingBar');
+    let progress = 0;
+    const loadInterval = setInterval(() => {
+      progress += Math.random() * 25 + 5;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(loadInterval);
+        setTimeout(() => {
+          document.getElementById('loading').classList.add('hidden');
+        }, 300);
+      }
+      bar.style.width = progress + '%';
+    }, 200);
+  </script>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
